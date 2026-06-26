@@ -1,0 +1,25 @@
+# Secrets: never commit API keys or credentials
+.env
+.env.*
+!.env.example
+*.key
+secrets/
+credentials*.json
+
+# Data and logs (large / regenerable / sensitive)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

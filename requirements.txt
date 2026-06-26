@@ -1,0 +1,17 @@
+# Core
+ccxt
+pandas
+numpy
+pyarrow
+
+# Research / plotting
+matplotlib
+jupyter
+
+# Config / secrets
+python-dotenv
+
+# Testing
+pytest
+
+# (Add vectorbt or others later, once a hand-rolled backtest exists)
