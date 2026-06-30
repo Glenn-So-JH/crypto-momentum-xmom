@@ -13,16 +13,20 @@ This is a learning project run to professional standards. The goal is not a "mon
 ## Folder layout
 ```
 crypto-momentum/
-  docs/         charter, roadmap, resources
+  docs/         charter, roadmap, resources, phase designs
+  xmom/         reusable library: data, quality, universe (engine/metrics added later)
   data/raw/     downloaded OHLCV (gitignored)
-  data/processed/  cleaned datasets, universe membership
-  research/     signal exploration, notebooks-as-scripts
+  data/processed/  cleaned datasets, universe membership (gitignored)
+  research/     signal exploration, results notes, notebooks-as-scripts
   backtest/     vectorized and event-driven backtest code
   portfolio/    position sizing, risk management
   live/         the execution engine (paper, then live)
   logs/         run logs, fills, reconciliation (gitignored)
   tests/        unit tests for signals, backtest, risk rules
   notebooks/    exploratory Jupyter notebooks
+  phase0_hello.py          live bid/ask/spread/fee check (Phase 0)
+  phase1_fetch_data.py     fetch daily OHLCV -> data/raw (Stage 1A)
+  phase1_build_universe.py clean + point-in-time liquidity screen (Stage 1A)
   PROGRESS_LOG.md
   README.md
 ```
@@ -34,4 +38,6 @@ crypto-momentum/
 - **Log everything.** Every session gets a `PROGRESS_LOG.md` entry; every live decision and fill is logged.
 
 ## Status
-Phase 0: scoping complete, environment setup beginning. See the progress log for the latest.
+Phase 1, Stage 1A complete: trustworthy 2-year daily dataset for ~22 Kraken USD pairs, with a
+point-in-time liquidity screen and a data-quality note (`research/phase1a_data_quality.md`). Next:
+Stage 1B, the vectorized backtest engine and its sanity + look-ahead tests. See the progress log.
