@@ -48,3 +48,16 @@ These numbers matter: the architect will use your real spreads and fees to set t
 - **Phase 0 run:** `phase0_hello.py` connected to Kraken (1,506 markets), printed a live bid/ask/spread/volume table and the fee schedule. **No venue/geo error** (Kraken responded; no fallback needed). Full output saved to `logs/phase0_output.txt`. Live fees: **maker 0.25% / taker 0.40%** (taker round-trip ~0.80% pre-spread/slippage). Snapshot pasted into `PROGRESS_LOG.md`.
 - **Repo:** public GitHub repo `crypto-momentum-xmom` created, `main` pushed. Topics: quant, crypto, momentum, algorithmic-trading. **No license** (per user decision).
 - **Commit:** clean initial commit `Phase 0: project scaffolding, charter, roadmap, hello-world data script`.
+
+---
+
+## Master brief run  -  2026-07-02  -  Stages A to D (autonomous)
+
+### Stage A result note (Claude Code, 2026-07-02)
+**Status: GATE PASSED.**
+- Funnel: 637 enumerated Kraken USD spot pairs, 20 excluded (stablecoins/fiat/commodity tokens), 617 fetched with 0 failures, 132 ever pass the $1M/day point-in-time screen, 23 current members.
+- Depth: panel 2019-01-01 to 2026-07-01; 391 weekly observations (previously ~104), 363 post-warmup (previously ~75). Sharpe SE improves from ~0.83 to ~0.38.
+- Kraken OHLCVT archives are Google-Drive-only (not scriptable), so the authorized fallback was used: Binance deep history, spliced per coin only when overlap return correlation >= 0.98 over >= 60 days (153 spliced, median corr 0.9950; all rejections recorded in provenance.csv).
+- Material issue found and fixed: raw Binance volumes (10-50x Kraken) inflated pre-splice universe breadth and created an artificial ~120 to ~28 membership cliff at the splice boundary. Pre-splice volumes are now scaled per coin by the overlap venue share (median 0.019). Prices never touched. Stated as a documented proxy assumption in research/stage_a_data_report.md.
+- Tests: 55 passed, including point-in-time screen invariance and splice acceptance/rejection/scaling.
+- Full gate report: research/stage_a_data_report.md.

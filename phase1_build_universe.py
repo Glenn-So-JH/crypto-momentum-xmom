@@ -1,23 +1,24 @@
 """
-phase1_build_universe.py  -  Stage 1A, step 2: clean the raw data and build the universe.
+phase1_build_universe.py  -  Stage A, step 2: clean the raw data and build the universe.
 
 Pipeline:
-  1. Load every per-coin Parquet from data/raw.
-  2. Stitch ticker renames (e.g. MATIC -> POL) into one continuous history.
-  3. Run data-quality checks on each coin (gaps, duplicates, zero-volume, outliers) and
-     produce cleaned daily series.
+  1. Load every spliced per-coin Parquet from data/raw (top level; venue-native copies
+     live in data/raw/kraken and data/raw/secondary and are not read here).
+  2. Stitch any legacy ticker renames (auto-enumeration normally makes this a no-op).
+  3. Run data-quality checks per coin and produce cleaned daily series.
   4. Build aligned close-price and dollar-volume panels.
-  5. Apply the point-in-time liquidity screen to get a per-date membership matrix.
-  6. Write processed Parquet (close, dollar_volume, universe) and a data-quality report,
-     then print a summary.
+  5. Apply the point-in-time liquidity screen (trailing-30d median >= $1M).
+  6. Write processed Parquet + two reports:
+       data/processed/DATA_QUALITY.md      full machine report (gitignored)
+       research/stage_a_data_report.md     committed Stage A gate report
 
 Run it (after phase1_fetch_data.py):
     python phase1_build_universe.py
-
-Inputs (data/raw) and outputs (data/processed) are both gitignored.
 """
 
 from __future__ import annotations
+
+import json
 
 import pandas as pd
 
@@ -27,39 +28,167 @@ from xmom import config, data, quality, universe
 def _load_raw_frames() -> dict[str, pd.DataFrame]:
     frames = {}
     for path in sorted(config.DATA_RAW.glob("*.parquet")):
-        base = path.stem
-        frames[base] = data.load_raw(base)
+        frames[path.stem] = data.load_raw(path.stem)
     return frames
 
 
-def _write_quality_report(reports: list[dict], members: pd.DataFrame) -> str:
-    counts = universe.membership_counts(members)
-    lines = ["# Stage 1A data-quality report", ""]
-    lines.append(f"- Coins after rename-stitching: **{len(reports)}**")
-    if not members.empty:
-        lines.append(f"- Date range: **{members.index.min().date()} -> {members.index.max().date()}**")
-        lines.append(
-            f"- Universe size over time (members/day): min {int(counts.min())}, "
-            f"median {int(counts.median())}, max {int(counts.max())}"
-        )
-        lines.append(f"- Current members ({len(universe.current_members(members))}): "
-                     f"{', '.join(universe.current_members(members))}")
-    lines += ["", "## Per-coin quality", ""]
-    lines.append("| coin | candles | first | last | dup dates | gaps filled | zero-vol days | outliers |")
-    lines.append("|---|---:|---|---|---:|---:|---:|---:|")
+def _quality_table(reports: list[dict]) -> list[str]:
+    lines = ["| coin | candles | first | last | dup dates | gaps filled | zero-vol days | outliers |",
+             "|---|---:|---|---|---:|---:|---:|---:|"]
     for r in sorted(reports, key=lambda x: x["name"]):
         lines.append(
             f"| {r['name']} | {r['n_rows_raw']} | {r['first_date']} | {r['last_date']} | "
             f"{r['n_duplicate_dates']} | {r['n_calendar_gaps_filled']} | "
             f"{r['n_zero_volume_days']} | {r['n_outliers_flagged']} |"
         )
-    # List any flagged outliers explicitly so they can be eyeballed.
+    return lines
+
+
+def _write_full_quality_report(reports: list[dict], members: pd.DataFrame) -> None:
+    counts = universe.membership_counts(members)
+    lines = ["# Data-quality report (machine-generated, full universe)", ""]
+    lines.append(f"- Coins: **{len(reports)}**")
+    if not members.empty:
+        lines.append(f"- Date range: **{members.index.min().date()} -> {members.index.max().date()}**")
+        lines.append(f"- Universe size per day: min {int(counts.min())}, median {int(counts.median())}, "
+                     f"max {int(counts.max())}")
+    lines += ["", "## Per-coin quality", ""]
+    lines += _quality_table(reports)
     flagged = [(r["name"], r["outlier_dates"]) for r in reports if r["outlier_dates"]]
     if flagged:
-        lines += ["", "## Suspect prints flagged (review, not auto-removed)", ""]
+        lines += ["", f"## Suspect prints flagged ({sum(len(d) for _, d in flagged)} across "
+                      f"{len(flagged)} coins; review, not auto-removed)", ""]
         for name, dates in sorted(flagged):
-            lines.append(f"- **{name}**: {', '.join(dates)}")
-    return "\n".join(lines) + "\n"
+            shown = ", ".join(dates[:6]) + (f", +{len(dates) - 6} more" if len(dates) > 6 else "")
+            lines.append(f"- **{name}**: {shown}")
+    (config.DATA_PROCESSED / "DATA_QUALITY.md").write_text("\n".join(lines) + "\n")
+
+
+def _write_gate_report(
+    reports: list[dict],
+    members: pd.DataFrame,
+    close_panel: pd.DataFrame,
+    manifest: dict | None,
+    provenance: pd.DataFrame | None,
+) -> None:
+    counts = universe.membership_counts(members)
+    ever_members = members.any()
+    ever_names = sorted(ever_members[ever_members].index)
+    current = universe.current_members(members)
+    mondays = close_panel.index[close_panel.index.weekday == 0]
+    eval_start = close_panel.index[0] + pd.Timedelta(days=config.WARMUP_DAYS)
+    eval_mondays = mondays[mondays >= eval_start]
+
+    lines = ["# Stage A gate report: deep + wide data", ""]
+    lines.append(f"Generated by `phase1_build_universe.py`. Venue: Kraken USD spot; deep pre-history: "
+                 f"{config.SECONDARY_EXCHANGE_ID} ({config.SECONDARY_QUOTE} quote), spliced only where "
+                 f"overlap return correlation >= {config.RECONCILE_MIN_CORR} over >= "
+                 f"{config.RECONCILE_MIN_OVERLAP_DAYS} shared days. Kraken rows are authoritative on overlap.")
+    lines.append("")
+
+    lines.append("## Universe funnel")
+    lines.append("")
+    if manifest:
+        lines.append(f"1. Active Kraken USD spot pairs enumerated: **{manifest['enumerated']}**")
+        exc = manifest["excluded"]
+        lines.append(f"2. Excluded non-signal assets: **{sum(exc.values())}** "
+                     f"(stablecoins {exc.get('stablecoin', 0)}, fiat {exc.get('fiat', 0)}, "
+                     f"commodity tokens {exc.get('commodity_token', 0)})")
+        lines.append(f"3. Candidates fetched: **{manifest['fetched']}** "
+                     f"({len(manifest.get('failures', []))} fetch failures/empties)")
+    lines.append(f"4. Coins that EVER pass the point-in-time screen "
+                 f"(trailing-{config.LIQUIDITY_WINDOW}d median dollar volume >= "
+                 f"${config.LIQUIDITY_MIN_USD:,}): **{len(ever_names)}**")
+    lines.append(f"5. Current members ({members.index.max().date()}): **{len(current)}**")
+    lines.append("")
+    lines.append(f"Universe breadth per day: min {int(counts.min())}, 25th pct {int(counts.quantile(0.25))}, "
+                 f"median {int(counts.median())}, 75th pct {int(counts.quantile(0.75))}, max {int(counts.max())}.")
+    lines.append("")
+
+    lines.append("## Observation counts (the statistical budget)")
+    lines.append("")
+    lines.append(f"- Panel: **{close_panel.index.min().date()} -> {close_panel.index.max().date()}** "
+                 f"({len(close_panel)} daily rows).")
+    lines.append(f"- Weekly rebalance observations (Mondays in panel): **{len(mondays)}** "
+                 f"(previous Kraken-only panel: ~104).")
+    lines.append(f"- Weekly observations after the {config.WARMUP_DAYS}-day warmup: **{len(eval_mondays)}** "
+                 f"(previous: ~75).")
+    se_full = (52 / len(eval_mondays)) ** 0.5 if len(eval_mondays) else float("nan")
+    lines.append(f"- Approximate annualized Sharpe standard error on the post-warmup window: "
+                 f"**~{se_full:.2f}** (was ~0.83). Still not proof territory; see docs/04.")
+    lines.append("")
+
+    if provenance is not None and not provenance.empty:
+        spliced = provenance[provenance["spliced"]]
+        lines.append("## Splice provenance")
+        lines.append("")
+        lines.append(f"- Coins deep-spliced with {config.SECONDARY_EXCHANGE_ID} pre-history: "
+                     f"**{len(spliced)}** of {len(provenance)}.")
+        if len(spliced):
+            lines.append(f"- Overlap daily-return correlation across spliced coins: "
+                         f"median **{spliced['ret_corr'].median():.4f}**, "
+                         f"min **{spliced['ret_corr'].min():.4f}**.")
+            lines.append(f"- Mean absolute close basis (venue level difference): median "
+                         f"**{spliced['mean_abs_close_diff'].median() * 100:.3f}%**.")
+        def _reason_group(reason: str) -> str:
+            if reason.startswith("ret corr"):
+                return "overlap return correlation below 0.98"
+            if reason.startswith("overlap"):
+                return "overlap shorter than 60 days"
+            return reason
+        reasons = (provenance[~provenance["spliced"]]["reject_reason"]
+                   .map(_reason_group).value_counts())
+        if len(reasons):
+            lines.append("- Kraken-only (no splice) by reason: "
+                         + "; ".join(f"{reason}: {n}" for reason, n in reasons.items()) + ".")
+        lines.append("")
+        lines.append("USDT-quote caveat: pre-history rows are Binance USDT-quoted. The USDT/USD basis is a "
+                     "few bps outside depeg episodes; return-correlation acceptance and the level-basis "
+                     "stats above bound the error. Kraken USD rows decide everything from each coin's "
+                     "splice date onward.")
+        lines.append("")
+        if len(spliced) and "vol_ratio" in spliced:
+            lines.append("Volume-basis harmonization: raw Binance volumes run 10-50x Kraken's, which "
+                         "inflated pre-splice universe breadth and produced an artificial membership "
+                         "cliff at the splice boundary (observed: ~120 members collapsing to ~28 within "
+                         "weeks, driven by the venue switch, not by markets). Pre-splice VOLUMES (never "
+                         "prices) are therefore scaled per coin by the overlap venue share, median Kraken "
+                         "dollar volume over median Binance dollar volume "
+                         f"(across coins: median {spliced['vol_ratio'].median():.3f}, "
+                         f"IQR {spliced['vol_ratio'].quantile(0.25):.3f} to "
+                         f"{spliced['vol_ratio'].quantile(0.75):.3f}). Stated proxy assumption: venue "
+                         "share is treated as constant back in time, estimated on the overlap window. "
+                         "This uses overlap-era information to calibrate a liquidity PROXY for earlier "
+                         "dates; prices and returns are untouched and the screen itself remains strictly "
+                         "trailing. The owner can disable this by reverting data.splice_history.")
+        lines.append("")
+
+    lines.append("## Per-coin history depth (coins that ever pass the screen)")
+    lines.append("")
+    lines.append("| coin | first date | last date | daily rows | spliced pre-history |")
+    lines.append("|---|---|---|---:|---|")
+    prov_map = {}
+    if provenance is not None and not provenance.empty:
+        prov_map = provenance.set_index("base").to_dict("index")
+    by_name = {r["name"]: r for r in reports}
+    for name in ever_names:
+        r = by_name.get(name)
+        if r is None:
+            continue
+        p = prov_map.get(name, {})
+        spl = f"yes, from {config.SECONDARY_EXCHANGE_ID} ({p.get('prepended_rows', 0)} rows)" if p.get("spliced") else "no (Kraken-only)"
+        lines.append(f"| {name} | {r['first_date']} | {r['last_date']} | {r['n_rows_raw']} | {spl} |")
+    lines.append("")
+
+    lines.append("## Known limitations (stated out loud)")
+    lines.append("")
+    lines.append("- Residual survivorship: the candidate set is pairs Kraken lists at fetch time. Coins "
+                 "delisted before that date (LUNA-era casualties, FTT) never enter. Within the window the "
+                 "screen is point-in-time and honest; across pre-window delistings it cannot see the dead.")
+    lines.append("- Pre-history is another venue's prints (documented above), and USDT-quoted.")
+    lines.append("- Ambiguous rebrands are NOT stitched (only MATIC->POL and FTM->S are); such coins are "
+                 "Kraken-only until documented properly.")
+    (config.REPO_ROOT / "research" / "stage_a_data_report.md").write_text("\n".join(lines) + "\n")
 
 
 def build():
@@ -80,31 +209,37 @@ def build():
     close_panel, dvol_panel = universe.build_panels(cleaned_frames)
     members = universe.point_in_time_universe(dvol_panel)
 
-    # Persist processed artifacts (gitignored).
     config.DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
     close_panel.to_parquet(config.DATA_PROCESSED / "close.parquet")
     dvol_panel.to_parquet(config.DATA_PROCESSED / "dollar_volume.parquet")
     members.to_parquet(config.DATA_PROCESSED / "universe.parquet")
 
-    report_md = _write_quality_report(reports, members)
-    (config.DATA_PROCESSED / "DATA_QUALITY.md").write_text(report_md)
+    manifest = None
+    manifest_path = config.DATA_PROCESSED / "fetch_manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+    provenance = None
+    prov_path = config.DATA_PROCESSED / "provenance.csv"
+    if prov_path.exists():
+        provenance = pd.read_csv(prov_path)
 
-    # Console summary.
+    _write_full_quality_report(reports, members)
+    _write_gate_report(reports, members, close_panel, manifest, provenance)
+
     counts = universe.membership_counts(members)
-    print(f"Cleaned {len(cleaned_frames)} coins (after rename-stitching).")
+    mondays = close_panel.index[close_panel.index.weekday == 0]
+    print(f"Cleaned {len(cleaned_frames)} coins.")
     print(f"Date range: {close_panel.index.min().date()} -> {close_panel.index.max().date()} "
-          f"({len(close_panel)} daily rows).")
+          f"({len(close_panel)} daily rows, {len(mondays)} weekly observations).")
     print(f"Universe size per day: min {int(counts.min())}, median {int(counts.median())}, "
-          f"max {int(counts.max())}.")
-    print(f"Current members ({len(universe.current_members(members))}): "
-          f"{', '.join(universe.current_members(members))}")
-
+          f"max {int(counts.max())}. Current members: {len(universe.current_members(members))}.")
     total_dups = sum(r["n_duplicate_dates"] for r in reports)
     total_gaps = sum(r["n_calendar_gaps_filled"] for r in reports)
     total_outliers = sum(r["n_outliers_flagged"] for r in reports)
-    print(f"\nQuality totals: {total_dups} duplicate dates, {total_gaps} calendar gaps filled, "
+    print(f"Quality totals: {total_dups} duplicate dates, {total_gaps} calendar gaps filled, "
           f"{total_outliers} suspect prints flagged.")
-    print(f"Full report written to {config.DATA_PROCESSED / 'DATA_QUALITY.md'}")
+    print(f"Machine report: {config.DATA_PROCESSED / 'DATA_QUALITY.md'}")
+    print(f"Gate report:    research/stage_a_data_report.md")
     return reports, members
 
 

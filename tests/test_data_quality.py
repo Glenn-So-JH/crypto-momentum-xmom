@@ -7,9 +7,10 @@ see the future, which is the whole reason the screen exists.
 """
 
 import numpy as np
+import pytest
 import pandas as pd
 
-from xmom import quality, universe
+from xmom import data, quality, universe
 
 
 def make_frame(start="2024-01-01", n=10, close=100.0, volume=1_000.0):
@@ -107,6 +108,77 @@ def test_universe_is_point_in_time():
     for t in dvol.index:
         truncated = universe.point_in_time_universe(dvol.loc[:t], window=4, min_usd=1_000)
         assert (full.loc[t] == truncated.loc[t]).all(), f"look-ahead leak at {t}"
+
+
+# --- deep-history splice ---------------------------------------------------------
+
+def make_walk(start, n, seed, base_price=100.0, vol=0.03):
+    """A random-walk price frame so return correlations are meaningful."""
+    rng = np.random.default_rng(seed)
+    rets = rng.normal(0, vol, n)
+    close = base_price * np.exp(np.cumsum(rets))
+    idx = pd.date_range(start, periods=n, freq="D")
+    idx.name = "date"
+    return pd.DataFrame(
+        {"open": close, "high": close, "low": close, "close": close, "volume": 1000.0},
+        index=idx,
+    )
+
+
+def test_splice_accepts_agreeing_venues():
+    # Secondary covers 2019-2024+overlap; Kraken covers the last 200 days of it.
+    sec = make_walk("2023-01-01", 500, seed=1)
+    kr = sec.iloc[-200:].copy() * 1.001  # same returns, tiny level offset (venue basis)
+    spliced, prov = data.splice_history(kr, sec, "X")
+    assert prov["spliced"] is True
+    assert prov["prepended_rows"] == 300
+    assert len(spliced) == 500
+    # Kraken rows are authoritative on the overlap.
+    assert np.allclose(spliced.iloc[-200:]["close"], kr["close"])
+    # Pre-history rows come from the secondary venue.
+    assert np.allclose(spliced.iloc[:300]["close"], sec.iloc[:300]["close"])
+
+
+def test_splice_rejects_disagreeing_venues():
+    sec = make_walk("2023-01-01", 500, seed=1)
+    kr = make_walk("2024-05-15", 200, seed=2)  # independent walk: returns disagree
+    kr.index = sec.index[-200:]                # force calendar overlap
+    spliced, prov = data.splice_history(kr, sec, "X")
+    assert prov["spliced"] is False
+    assert "corr" in prov["reject_reason"]
+    assert len(spliced) == len(kr)  # Kraken-only
+
+
+def test_splice_rejects_short_overlap():
+    sec = make_walk("2023-01-01", 320, seed=1)
+    kr = sec.iloc[-10:].copy()  # only 10 shared days, below the 60-day bar
+    spliced, prov = data.splice_history(kr, sec, "X")
+    assert prov["spliced"] is False
+    assert "overlap" in prov["reject_reason"]
+    assert len(spliced) == 10
+
+
+def test_reconcile_overlap_perfect_agreement():
+    frame = make_walk("2024-01-01", 100, seed=3)
+    rec = data.reconcile_overlap(frame, frame.copy())
+    assert rec["overlap_days"] == 100
+    assert rec["ret_corr"] > 0.9999
+    assert rec["mean_abs_close_diff"] < 1e-12
+
+
+def test_splice_scales_prehistory_volume_to_kraken_basis():
+    sec = make_walk("2023-01-01", 500, seed=1)
+    sec["volume"] = 10_000.0                 # big venue
+    kr = sec.iloc[-200:].copy()
+    kr["volume"] = 1_000.0                   # our venue trades 10x less
+    spliced, prov = data.splice_history(kr, sec, "X")
+    assert prov["spliced"] is True
+    assert prov["vol_ratio"] == pytest.approx(0.1, rel=1e-9)
+    # Pre-history volumes scaled to Kraken-equivalent; prices untouched.
+    assert np.allclose(spliced.iloc[:300]["volume"], 1_000.0)
+    assert np.allclose(spliced.iloc[:300]["close"], sec.iloc[:300]["close"])
+    # Kraken rows verbatim.
+    assert np.allclose(spliced.iloc[-200:]["volume"], 1_000.0)
 
 
 def test_build_panels_aligns_and_computes_dollar_volume():
