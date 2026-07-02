@@ -13,22 +13,34 @@ This is a learning project run to professional standards. The goal is not a "mon
 ## Folder layout
 ```
 crypto-momentum/
-  docs/         charter, roadmap, resources, phase designs
-  xmom/         reusable library: data, quality, universe (engine/metrics added later)
-  data/raw/     downloaded OHLCV (gitignored)
-  data/processed/  cleaned datasets, universe membership (gitignored)
-  research/     signal exploration, results notes, notebooks-as-scripts
-  backtest/     vectorized and event-driven backtest code
-  portfolio/    position sizing, risk management
-  live/         the execution engine (paper, then live)
-  logs/         run logs, fills, reconciliation (gitignored)
-  tests/        unit tests for signals, backtest, risk rules
+  docs/         charter, roadmap, decision log, specs, phase designs, research synthesis
+  xmom/         the library: config, data, quality, universe, engine, metrics,
+                strategies (S1-S6), phase2 (base case + challenger), validation (DSR, folds)
+  data/raw/     downloaded OHLCV, Kraken + secondary venue + spliced (gitignored)
+  data/processed/  cleaned panels, universe membership, provenance (gitignored)
+  research/     committed results: reports, figures, trials ledger, data notes
+  backtest/     (reserved) event-driven backtest code
+  portfolio/    (reserved) position sizing, risk management
+  live/         (reserved) the execution engine (paper, then live)
+  logs/         run logs (gitignored)
+  tests/        unit tests: engine gates, look-ahead guards, strategies, validation
   notebooks/    exploratory Jupyter notebooks
   phase0_hello.py          live bid/ask/spread/fee check (Phase 0)
-  phase1_fetch_data.py     fetch daily OHLCV -> data/raw (Stage 1A)
-  phase1_build_universe.py clean + point-in-time liquidity screen (Stage 1A)
+  phase1_fetch_data.py     enumerate + fetch + deep-splice OHLCV -> data/raw (Stage A)
+  phase1_build_universe.py clean + point-in-time liquidity screen (Stage A)
+  phase1_run_ladder.py     the S1-S6 validation ladder -> research/PHASE1_RESULTS.md
+  phase2_run.py            base case vs challenger -> research/PHASE2_RESULTS.md
+  Makefile                 make data / make backtests / make test
   PROGRESS_LOG.md
   README.md
+```
+
+## Reproduce everything
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+make data        # rebuild the full dataset from public APIs (~20 min, no keys)
+make test        # engine sanity, look-ahead guards, 50+ unit tests
+make backtests   # Stage C ladder + Phase 2 head-to-head, reports into research/
 ```
 
 ## Ground rules
