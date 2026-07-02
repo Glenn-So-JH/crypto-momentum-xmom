@@ -74,3 +74,11 @@ These numbers matter: the architect will use your real spreads and fees to set t
 - Headline: the cost wall. Net-50 Sharpe: S3b 1.03, S3a 0.78, S1 0.73, S2 0.47, S4a 0.45, S5b 0.32, S5c 0.25, S5a 0.16, S4b 0.07, S6 -0.26. Every XS variant lost absolute money over 7 years even gross; only the S3 BTC trend filters beat buy-and-hold risk-adjusted.
 - One predicted ordering violated and explained after investigation: S4 TSMOM drawdowns are DEEPER than equal-weight (equal-weighted holder concentration, 15% of weeks in 1-2 coins, plus the 2022 stair-step bear whipsawing the trailing brake). Motivates the Phase 2 overlays directly.
 - Deliverables: research/PHASE1_RESULTS.md (tables, gate checks, observations, thin-universe warning, power statement), research/figures/phase1_equity.png and phase1_drawdown.png, research/TRIALS_LEDGER.csv.
+
+### Stage D result note (Claude Code, 2026-07-02)
+**Status: GATE PASSED, with a recorded surprise.**
+- Head-to-head net of 50 bps: BASE_21 Sharpe 0.84 / CAGR 18.9% / maxDD -40.0%; CHAL_21 Sharpe 0.95 / CAGR 21.4% / maxDD -37.9%. Both far above the S1 (0.73) and S2 (0.47) benchmarks. Vol target and gate worked: ~24% realized vol, book fully in cash through the four 2022 bear quarters.
+- Verdict by the registered rule: BASE CASE kept. The 0.11 Sharpe gap is a statistical tie on this window (SE ~0.38) and ties go to the simpler book; under the strict fold-clause reading the challenger also falls short (11 of 23 including both-flat folds). The registered PREDICTION missed: XS with shared overlays did not lose. Recorded prominently; challenger queued for a registered E5 experiment.
+- Base success criteria 7/7. Neighbor plateau 0.83 to 1.06 net-50 Sharpe, no sign flips (gate=100 neighbor outperformed and was deliberately NOT selected). Single-name dependence healthy: top coin 12% of positive P&L. DSR 0.962 at K=12, labeled provisional with caveats.
+- Deliverables: research/PHASE2_RESULTS.md, research/figures/phase2_head_to_head.png, 21 ledger rows.
+- Hard-stop compliance: no keys created or used, no orders, nothing deployed. Backtests and reports only.

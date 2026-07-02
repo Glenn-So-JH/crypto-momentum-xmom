@@ -1,5 +1,7 @@
 # Phase 1 results: the classic-strategy validation ladder (Stage C)
 
+*(Phase 2's base-case vs challenger head-to-head is in [PHASE2_RESULTS.md](PHASE2_RESULTS.md).)*
+
 Window: **2019-07-22 to 2026-07-01** (363 weekly rebalance observations). Universe: point-in-time liquidity-screened Kraken USD pairs (see research/stage_a_data_report.md). Annualization 365. Weekly Monday rebalance. Tie-breaks alphabetical.
 
 ## Pre-registration (from docs/03, written before any run)
