@@ -84,3 +84,14 @@ Fees: maker 0.0025 (0.250%)  |  taker 0.004 (0.400%)
 **Decisions:** Inception funding trade excluded from turnover and costs for all strategies (compared on ongoing trading, not day-one buy-in); documented in the engine docstring.
 **Next:** Stage C: run the ten-strategy validation ladder, gross and net.
 **LinkedIn seed:** "My backtest engine passed the test that matters: a strategy that literally knows tomorrow's winner cannot make money in it. If your backtester does not have that test, it is not a measuring instrument, it is a wish machine."
+
+---
+
+## 2026-07-02 | Phase 1 (Stage C) | The classics, reproduced: costs are the story
+**Did:** Ran the full ten-run validation ladder (S1 buy-and-hold, S2 equal-weight, S3a/b MA filters, S4a/b TSMOM, S5a/b/c XS momentum, S6 reversal) on the 7-year panel, gross plus net at 25 and 50 bps per side. All six gate checks passed. Results, table, charts, and observations in research/PHASE1_RESULTS.md; all 30 runs logged in research/TRIALS_LEDGER.csv.
+**Learned:** The cost wall is real and it is exactly where the literature said it would be. Gross-to-net50: XS momentum Sharpe 0.37 to 0.16, reversal 0.15 to -0.26, while the low-turnover BTC trend filter barely notices (1.08 to 1.03). Turnover above 2,000% a year at 50 bps a side costs about 20% of the book annually, the size of the whole documented momentum premium. Also: only the S3 trend filters beat buy-and-hold BTC risk-adjusted; every XS variant lost money in absolute terms over 7 years even gross.
+**Surprised / stuck:** One registered prediction was violated: TSMOM drawdowns (-85.7% at L=90) came out DEEPER than equal-weight (-83.6%). Investigated before crediting: equal-weighting the holders concentrates the book (15% of weeks were 100% in 1 or 2 coins), and the 2022 stair-step bear whipsawed the trailing-return brake back into dying alts on every relief rally. The engine is unit-test-pinned; the behavior is the strategy's true shape and precisely motivates the Phase 2 overlays (vol sizing, name cap, portfolio gate).
+**Hypothesis (if testing):** The registered orderings from docs/03 section 8: turnover and time-in-market orderings held exactly; drawdown ordering held except S4 as above; S6 weakest as predicted.
+**Decisions:** None new. Universe churn (S2 at 462%/yr turnover against a 10-50% guess) is noted as a real property of an absolute-floor screen on a wide universe, to revisit only through registered experiments.
+**Next:** Stage D: the pre-registered base case (gated, vol-sized TSMOM-21) against the XS top-3 challenger, decided net of 50 bps.
+**LinkedIn seed:** "I reproduced six classic crypto strategies on 7 years of data. The one that made the most money was not momentum. It was the boring 100-day trend filter on Bitcoin, and the reason is fees: at real retail costs, 2,000% turnover donates your entire edge to the exchange."
