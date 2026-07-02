@@ -80,5 +80,5 @@ These numbers matter: the architect will use your real spreads and fees to set t
 - Head-to-head net of 50 bps: BASE_21 Sharpe 0.84 / CAGR 18.9% / maxDD -40.0%; CHAL_21 Sharpe 0.95 / CAGR 21.4% / maxDD -37.9%. Both far above the S1 (0.73) and S2 (0.47) benchmarks. Vol target and gate worked: ~24% realized vol, book fully in cash through the four 2022 bear quarters.
 - Verdict by the registered rule: BASE CASE kept. The 0.11 Sharpe gap is a statistical tie on this window (SE ~0.38) and ties go to the simpler book; under the strict fold-clause reading the challenger also falls short (11 of 23 including both-flat folds). The registered PREDICTION missed: XS with shared overlays did not lose. Recorded prominently; challenger queued for a registered E5 experiment.
 - Base success criteria 7/7. Neighbor plateau 0.83 to 1.06 net-50 Sharpe, no sign flips (gate=100 neighbor outperformed and was deliberately NOT selected). Single-name dependence healthy: top coin 12% of positive P&L. DSR 0.962 at K=12, labeled provisional with caveats.
-- Deliverables: research/PHASE2_RESULTS.md, research/figures/phase2_head_to_head.png, 21 ledger rows.
+- Deliverables: research/PHASE2_RESULTS.md, research/figures/phase2_head_to_head.png, 15 ledger rows (45 total in the ledger).
 - Hard-stop compliance: no keys created or used, no orders, nothing deployed. Backtests and reports only.
