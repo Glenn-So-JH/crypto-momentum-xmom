@@ -73,3 +73,14 @@ Fees: maker 0.0025 (0.250%)  |  taker 0.004 (0.400%)
 **Decisions:** (1) Volume-basis harmonization as above, stated proxy assumption documented in the gate report, reversible via config. (2) $1M/day bar unchanged (DEC-005). (3) Ambiguous rebrands not stitched (only MATIC to POL and FTM to S); others stay Kraken-only and are listed. (4) USTC excluded as a stablecoin by intent even though it floats now.
 **Next:** Stage B gate: run the engine smoke test (buy-and-hold BTC vs equal-weight) on the new panel.
 **LinkedIn seed:** "I extended my crypto dataset from 2 to 7.5 years and the hardest bug was not in the prices. It was in the volumes: my two data sources disagreed by 50x, and the splice quietly invented a liquidity crash that never happened. Here is how a universe screen can lie to you."
+
+---
+
+## 2026-07-02 | Phase 1 (Stage B) | The engine earns its trust
+**Did:** Built the vectorized backtest engine (sacred t to t+1 lag, dormant cost hook, target-weight turnover, long-only and no-leverage guards that raise loudly) plus the metrics module (docs/03 table verbatim, 365 annualization). Wrote the five gate tests from the master brief and passed all of them, including: buy-and-hold reproduces BTC exactly (synthetic and real panel, rtol 1e-10), a strategy that peeks at tomorrow gains nothing, future price perturbations cannot change past returns, cash weeks are exactly flat, and metrics match hand-computed values. Also built the drift-aware engine extension with no-trade bands for Phase 2. Smoke run on the real panel done.
+**Learned:** The window now contains a real bear market and it shows: buy-and-hold BTC from 2019-07 carries a 76.6% max drawdown, and the equal-weight universe basket carries 83.6% with a CAGR of only 8.7% against BTC's 28.8%. Diversification across alts was not protection, it was extra beta.
+**Surprised / stuck:** Equal-weight turnover came out at 462% one-sided per year against the spec's 10 to 50% guess. Cause: with 132 ever-liquid names, marginal coins oscillate around the $1M/day bar weekly, and every membership flip plus the 1/n re-scale trades the book. The accounting is unit-tested; the surprise is real behavior of an absolute-floor screen on a wide universe, worth remembering when costs switch on.
+**Hypothesis (if testing):** Registered before Stage C: predicted orderings per docs/03 section 8 (S3/S4 shallowest drawdowns, S1 < S3 < S2 < S4 < S5/S6 turnover, S6 weakest).
+**Decisions:** Inception funding trade excluded from turnover and costs for all strategies (compared on ongoing trading, not day-one buy-in); documented in the engine docstring.
+**Next:** Stage C: run the ten-strategy validation ladder, gross and net.
+**LinkedIn seed:** "My backtest engine passed the test that matters: a strategy that literally knows tomorrow's winner cannot make money in it. If your backtester does not have that test, it is not a measuring instrument, it is a wish machine."

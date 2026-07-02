@@ -61,3 +61,10 @@ These numbers matter: the architect will use your real spreads and fees to set t
 - Material issue found and fixed: raw Binance volumes (10-50x Kraken) inflated pre-splice universe breadth and created an artificial ~120 to ~28 membership cliff at the splice boundary. Pre-splice volumes are now scaled per coin by the overlap venue share (median 0.019). Prices never touched. Stated as a documented proxy assumption in research/stage_a_data_report.md.
 - Tests: 55 passed, including point-in-time screen invariance and splice acceptance/rejection/scaling.
 - Full gate report: research/stage_a_data_report.md.
+
+### Stage B result note (Claude Code, 2026-07-02)
+**Status: GATE PASSED.**
+- Engine: vectorized, sacred t to t+1 shift, dormant cost hook (multiplicative, charged on traded notional), turnover on target weights, inception funding excluded by convention. Drift-aware extension with no-trade bands included for Phase 2 (exercised by Stage D tests).
+- Metrics: the docs/03 section 7 table verbatim, annualization 365, ddof=1, hit rate and time-in-market conditioned on lagged gross exposure.
+- Gate tests all pass: BTC buy-and-hold reproduction (rtol 1e-10, real panel AND synthetic), look-ahead guard (future perturbation cannot change past returns; a peeking strategy earns nothing extra), no-leverage and long-only and ghost-position guards, cash-returns-zero, metrics on hand-computed synthetic series.
+- Smoke run on the real panel (2019-07-22 to 2026-07-01): S1 BTC CAGR 28.8%, Sharpe 0.72, maxDD -76.6%, turnover 0; S2 equal-weight CAGR 8.7%, Sharpe 0.53, maxDD -83.6%, turnover 462%/yr. S1 matches the real BTC path elementwise. S2 turnover is far above the spec's 10-50% guess: real membership churn around the $1M bar (marginal names flip weekly), not an accounting bug; carried into Stage C observations.
