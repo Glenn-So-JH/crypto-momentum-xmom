@@ -158,3 +158,25 @@ Fees: maker 0.0025 (0.250%)  |  taker 0.004 (0.400%)
 **Decisions:** Donchian uses close-based channels (the discovery panel stores closes only); documented. Nine alphas is the stable for this pass; new ones join through the same registry + probe-test contract.
 **Next:** WS-C: per-alpha analytics, the correlation matrix, and the weakly-correlated subset selection.
 **LinkedIn seed:** "Nine momentum alphas, one interface: every signal in my stable is a pure function that cannot see tomorrow, proven by a test that corrupts the future and checks nothing in the past changes. Diversification starts with plumbing discipline."
+
+---
+
+## 2026-07-03 | Handoff 8 WS-C | Nine alphas, two independent bets
+**Did:** Ran all nine market-neutral books on the playground (2018-03 to 2024-12), gross. Neutrality is real: realized betas to BTC range 0.001 to 0.023 across every sleeve. Standalone Sharpes: donchian_55 +1.38, sharpe_mom_30 +0.86, then a cluster at +0.30 to +0.35 (ts_trend_30, macd, xs_rank_21, mom_accel_30), with fast and slow trend near zero. Built the correlation matrix and heatmap, applied the pre-registered selection rule (Sharpe >= 0.30, max |corr| to selected < 0.50). Nine ledger rows.
+**Learned:** The correlation matrix is the finding. The momentum family is one trade wearing nine costumes: ts_trend_30 correlates 0.91 with MACD and 0.90 with Sharpe-momentum, and the whole trend/rank/breakout core sits at 0.6 to 0.9. Only momentum ACCELERATION (a differenced signal) is genuinely different (0.05 to 0.56 to everything else). Selection therefore kept just two of nine: donchian_55 and mom_accel_30. Breadth on paper is not breadth in fact.
+**Surprised / stuck:** How well the channel signal (Donchian) stands above the plain momentum variants at identical construction: +1.38 vs +0.35 for the trend cluster. Where price sits in its range appears to carry more cross-sectional information than how fast it got there, on this panel, gross.
+**Hypothesis (if testing):** Registered rule applied as written; no post-hoc relaxation to admit more sleeves.
+**Decisions:** Rejections stand even for sharpe_mom_30 (+0.86, corr 0.83 with donchian): correlated quality is redundancy, not diversification.
+**Next:** WS-D: combine the two survivors, validate, spend the one vault look.
+**LinkedIn seed:** "I built nine momentum alphas and measured their correlations. Nine signals collapsed to two independent bets: 0.9 correlation means you built the same strategy twice and gave it two names. The most valuable chart in my repo is now a heatmap."
+
+---
+
+## 2026-07-03 | Handoff 8 WS-D | The blend traded Sharpe for robustness, and the vault said "mild yes"
+**Did:** Combined the two selected sleeves equal-capital (both vol-targeted, so approximately equal risk), ran the full validation, and spent the single vault look. Combined book gross: Sharpe +1.13, vol 13.2%, maxDD -13.0%, beta +0.012, turnover 1,667% vs 2,056% sleeve mean (netting). Walk-forward: positive in 17 of 23 folds. DSR 0.655 at K=79 total ledger trials: indistinguishable from selection noise, stated plainly. Vault (2025+, one look, now spent): Sharpe +0.49, total +5.9%, maxDD -12.0%, beta -0.010. Full recruiter-facing report in research/ALPHA_RESEARCH_REPORT.md.
+**Learned:** The handoff predicted combined Sharpe should beat the best individual. It did not (+1.13 vs donchian's +1.38), and the arithmetic says why: at rho 0.22, the weaker sleeve needed roughly +0.78 Sharpe to pay its way and brought +0.30. The fundamental law is about breadth of COMPARABLE-quality independent bets; one strong plus one marginal is not breadth. What the blend genuinely bought: the shallowest drawdown in the stable, and positive Sharpe in BOTH bull (+1.30) and bear (+0.93) regimes, the first result in this whole project that is not bull-conditional.
+**Surprised / stuck:** The bear-regime Sharpe of +0.93. Market-neutral construction did exactly what it is sold as doing.
+**Hypothesis (if testing):** Registered: combined beats best individual. Outcome: falsified on Sharpe, supported on drawdown, vol, and regime robustness. Recorded, not spun.
+**Decisions:** No post-hoc reweighting toward the stronger sleeve (that would be fitting on the result). Next research increment registered as: alphas from different FAMILIES (funding/carry once perp data is ingested, liquidity, seasonality), not more momentum variants.
+**Next:** Realism layer (costs + funding) for the surviving book; funding-rate data ingestion; possibly a sector factor in the risk model.
+**LinkedIn seed:** "My combined market-neutral book underperformed its best ingredient, and that is the most useful result I have produced: diversification only pays when the bets are comparable, and my nine alphas were really two. Also the part that worked: positive Sharpe in bull AND bear, for the first time in this project."

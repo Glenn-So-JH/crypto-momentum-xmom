@@ -115,11 +115,26 @@ def build_book_row(
     return w * min(scalars) if scalars else w
 
 
+def precompute_risk(close: pd.DataFrame) -> dict:
+    """The risk inputs shared by every alpha on a given panel: compute once."""
+    rets = close.pct_change(fill_method=None)
+    market_rets = rets[config.MN_MARKET_ASSET]
+    betas = rolling_beta(rets, market_rets)
+    return {
+        "vol": rets.rolling(config.MN_VOL_WINDOW, min_periods=config.MN_VOL_WINDOW).std(ddof=1),
+        "betas": betas,
+        "resid": residual_vol(rets, market_rets, betas),
+        "market_vol": market_rets.rolling(config.MN_VOL_WINDOW,
+                                          min_periods=config.MN_VOL_WINDOW).std(ddof=1),
+    }
+
+
 def build_alpha_book(
     close: pd.DataFrame,
     universe: pd.DataFrame,
     signal: pd.DataFrame,
     t0: pd.Timestamp,
+    risk: dict | None = None,
     **kwargs,
 ) -> pd.DataFrame:
     """
@@ -127,13 +142,8 @@ def build_alpha_book(
     Weekly Monday rebalance, held between rebalances, forced flat on universe exit.
     Everything trailing; nothing reads past the rebalance close.
     """
-    rets = close.pct_change(fill_method=None)
-    market_rets = rets[config.MN_MARKET_ASSET]
-    vol = rets.rolling(config.MN_VOL_WINDOW, min_periods=config.MN_VOL_WINDOW).std(ddof=1)
-    betas = rolling_beta(rets, market_rets)
-    resid = residual_vol(rets, market_rets, betas)
-    market_vol = market_rets.rolling(config.MN_VOL_WINDOW,
-                                     min_periods=config.MN_VOL_WINDOW).std(ddof=1)
+    risk = precompute_risk(close) if risk is None else risk
+    vol, betas, resid, market_vol = risk["vol"], risk["betas"], risk["resid"], risk["market_vol"]
     u = universe.reindex(index=close.index, columns=close.columns).fillna(False)
 
     reb_days = engine.rebalance_days(close.index, start=t0)
