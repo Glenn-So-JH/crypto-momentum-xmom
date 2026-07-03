@@ -148,3 +148,13 @@ Fees: maker 0.0025 (0.250%)  |  taker 0.004 (0.400%)
 **Decisions:** Shorting abstracted as perp exposure (charter); funding modeled as a dormant annual rate on gross exposure, refined later at the realism layer. Market factor = BTC; single-factor risk model now, sector factor noted as future work.
 **Next:** WS-B: the alpha stable.
 **LinkedIn seed:** "New chapter: I am rebuilding my crypto project the way a trading firm would run it. First deliverable is not an alpha, it is the machine that makes any alpha market-neutral: rolling betas, a hedge leg, inverse-vol sizing, and caps that provably cannot break the hedge."
+
+---
+
+## 2026-07-03 | Handoff 8 WS-B | Nine alphas, one contract
+**Did:** Built the alpha stable (xmom/alphas.py): nine raw signals behind one pure-function contract (close panel in, trailing signal panel out), so the neutral-book pipeline treats them identically and the only difference between alphas is information. The stable: time-series trend at 10/30/90 days, cross-sectional rank momentum at 21/63 days, risk-adjusted (Sharpe) momentum, a 55-day Donchian channel position, MACD-style moving-average distance, and 14-day momentum acceleration. Registry-driven so the analytics layer iterates without special cases. Fourteen tests, including a parametrized future-perturbation probe over every alpha.
+**Learned:** Rank transforms and z-scores make signal SCALE irrelevant, which is liberating: MACD in price units and a Donchian position in [-1, 1] become directly comparable books after standardization. What still matters economically is horizon and functional form, which is exactly the diversification axis the stable is built on.
+**Surprised / stuck:** Only a test-fixture typo. The funding/term-structure sleeve from the brief is deliberately absent: it needs perp funding-rate data we do not ingest; labeled future work rather than faked.
+**Decisions:** Donchian uses close-based channels (the discovery panel stores closes only); documented. Nine alphas is the stable for this pass; new ones join through the same registry + probe-test contract.
+**Next:** WS-C: per-alpha analytics, the correlation matrix, and the weakly-correlated subset selection.
+**LinkedIn seed:** "Nine momentum alphas, one interface: every signal in my stable is a pure function that cannot see tomorrow, proven by a test that corrupts the future and checks nothing in the past changes. Diversification starts with plumbing discipline."
