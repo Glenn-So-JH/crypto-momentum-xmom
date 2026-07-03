@@ -124,6 +124,25 @@ def deflated_sharpe(returns: pd.Series, k: int, trial_sharpes_annual: list[float
     }
 
 
+def vault_start() -> pd.Timestamp:
+    return pd.Timestamp(config.OOS_VAULT_START)
+
+
+def playground_index(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
+    """
+    The tunable part of the calendar: everything strictly BEFORE the OOS vault.
+    Discovery tuning, plateau sweeps, and iteration operate only on this slice; the
+    harness passes alphas playground data only, so the vault is unseeable rather
+    than merely off-limits (Handoff #7 WS3).
+    """
+    return index[index < vault_start()]
+
+
+def vault_index(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
+    """The locked one-look vault: on/after config.OOS_VAULT_START."""
+    return index[index >= vault_start()]
+
+
 def walk_forward_folds(
     rebalance_days: pd.DatetimeIndex,
     initial_train_weeks: int = 52,

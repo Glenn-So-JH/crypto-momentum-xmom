@@ -60,3 +60,12 @@ def test_walk_forward_drops_partial_tail():
     days = pd.date_range("2020-01-06", periods=70, freq="7D")
     folds = validation.walk_forward_folds(days, initial_train_weeks=52, test_weeks=13)
     assert len(folds) == 1  # 18 weeks left after train: one full block, partial dropped
+
+
+def test_vault_split_is_exhaustive_and_disjoint():
+    idx = pd.date_range("2023-06-01", periods=900, freq="D")
+    play = validation.playground_index(idx)
+    vault = validation.vault_index(idx)
+    assert len(play) + len(vault) == len(idx)
+    assert play.max() < validation.vault_start() <= vault.min()
+    assert play.intersection(vault).empty

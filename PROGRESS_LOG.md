@@ -117,3 +117,13 @@ Fees: maker 0.0025 (0.250%)  |  taker 0.004 (0.400%)
 **Decisions:** Two-dataset architecture is now explicit: Kraken execution panel (unchanged) for tradability, Binance discovery panel for signal research, gross-judged, with Kraken constraints deferred to a survivors-only gate. Corporate-actions list lives in config.DISCOVERY_SYMBOL_SPLITS, auditable in git.
 **Next:** WS3 vault levers, then the WS2 alpha sandbox on this panel.
 **LinkedIn seed:** "I widened my crypto universe from 23 coins to 260 expecting my cross-sectional momentum signal to finally breathe. It drowned instead: top-3 of a wide universe is just a pump-chasing machine. The version that held the top fifth survived. Concentration, not breadth, was the real variable."
+
+---
+
+## 2026-07-03 | Handoff 7 WS3 | The vault: out-of-sample data you cannot peek at
+**Did:** Locked everything from 2025-01-01 onward into a one-look OOS vault, with the levers in a single config block (vault start, walk-forward train/fold lengths, regime definitions). The enforcement is structural: the alpha harness hands a signal only pre-vault data during tuning and plateau sweeps, so the vault is unseeable rather than merely off-limits. Scoring it requires an explicit flag, is labeled the final exam, and lands in the trials ledger as a declared look.
+**Learned:** The playground is 2,742 daily rows and the vault is 548 (about 78 weekly observations). That vault alone has a Sharpe standard error near 0.8, so even the final exam can only catch disasters and gross overfitting, not certify an edge. Writing that down now prevents over-reading it later.
+**Surprised / stuck:** Nothing; small workstream by design.
+**Decisions:** Fixed reference baselines (the ladder, the frozen Phase 2 candidates) may be reported across the vault era since they are not tuned; anything editable in the sandbox never sees it.
+**Next:** WS2: the alpha sandbox itself.
+**LinkedIn seed:** "I put two years of my data in a vault my own tooling refuses to show me. The best out-of-sample discipline is not willpower, it is code that makes peeking impossible."
