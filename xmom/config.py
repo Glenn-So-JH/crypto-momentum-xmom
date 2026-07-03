@@ -150,6 +150,20 @@ REGIME_ERAS = [
     ("2025+ vault era",        "2025-01-01", None),    # None = panel end
 ]
 
+# --- Firm-sim market-neutral construction (Handoff #8, docs/08_FIRM_SIM_CHARTER) --
+# Each alpha book is long-short and hedged to near-zero beta against the market
+# factor; shorting is abstracted (perps assumed), so these are research exposures.
+MN_MARKET_ASSET = "BTC"        # market factor proxy and the hedge leg
+MN_BETA_WINDOW = 90            # rolling beta estimation window (days)
+MN_BETA_MIN_PERIODS = 60
+MN_VOL_WINDOW = 30             # per-name vol for inverse-vol sizing
+MN_RESID_VOL_WINDOW = 60       # residual vol window for the factor risk model
+MN_VOL_TARGET = 0.15           # annualized target for a market-neutral sleeve
+MN_GROSS_CAP = 2.0             # sum |w| ceiling per sleeve (200% gross)
+MN_NAME_CAP = 0.10             # |w_i| ceiling per non-hedge name
+MN_ZSCORE_WINSOR = 3.0         # cross-sectional z-scores clipped at +/- 3
+MN_FUNDING_RATE_ANNUAL = 0.0   # dormant realism hook: perp funding charged on gross
+
 # --- Out-of-sample vault (Handoff #7 WS3) -----------------------------------------
 # Everything on/after OOS_VAULT_START is the locked one-look vault: tuning, plateau
 # sweeps, and iteration use strictly pre-vault data; the vault is scored once per

@@ -137,3 +137,14 @@ Fees: maker 0.0025 (0.250%)  |  taker 0.004 (0.400%)
 **Decisions:** Sandbox judges gross plus regime robustness on the discovery panel; Kraken costs and the thin universe stay a later survivors-only gate (per the revised handoff). Vault scoring only via an explicit --vault flag, logged as a declared look.
 **Next:** Handoff #7 complete. Natural follow-ons: E5 (TS+XS intersection) as a registered sandbox run, and the Phase 3 cost model for the Phase 2 candidate.
 **LinkedIn seed:** "I built a sandbox where testing a trading idea takes one function and one command, and where the tooling itself refuses to let me cheat: it hides the future, hides two years of out-of-sample data, and bills every parameter I try against my own significance. First finding: my founding idea does not beat buy-and-hold. Before fees."
+
+---
+
+## 2026-07-03 | Handoff 8 WS-A | Reframe to firm-sim; the market-neutral machine
+**Did:** Project reframed per docs/08_FIRM_SIM_CHARTER.md: the retail $10k Kraken deployment is parked; the mission is now a firm-grade simulation, discovering a stable of market-neutral, weakly-correlated momentum alphas and combining them. Built the machinery: a long-short engine (negative weights, gross-exposure cap, dormant fee and funding hooks) and xmom/neutral.py, the construction pipeline that turns any raw signal into a hedged book: cross-sectional z-score (winsorized), inverse-vol sizing, rolling 90d look-ahead-safe betas to BTC, a BTC hedge leg that zeroes ex-ante book beta, and a single-factor risk model driving a 15% vol target with gross and per-name caps.
+**Learned:** The cleanest trick in the construction: apply the vol target and both caps as ONE scalar (the minimum of the three implied scalars). Scaling a book by a scalar preserves its shape, so beta neutrality survives the caps by construction instead of needing an iterative re-hedge loop. The hedge leg is exempt from the name cap for the same reason: capping it would silently re-introduce the market exposure the whole design exists to remove.
+**Surprised / stuck:** Handoff #8 says "builds on the long-short engine from Handoff #7", but no long-short engine existed (the Phase 1 contract was long-only by design). Built it this workstream; noted rather than papered over.
+**Hypothesis (if testing):** None yet; construction only. Alphas come next.
+**Decisions:** Shorting abstracted as perp exposure (charter); funding modeled as a dormant annual rate on gross exposure, refined later at the realism layer. Market factor = BTC; single-factor risk model now, sector factor noted as future work.
+**Next:** WS-B: the alpha stable.
+**LinkedIn seed:** "New chapter: I am rebuilding my crypto project the way a trading firm would run it. First deliverable is not an alpha, it is the machine that makes any alpha market-neutral: rolling betas, a hedge leg, inverse-vol sizing, and caps that provably cannot break the hedge."

@@ -120,6 +120,78 @@ def run_backtest(
     )
 
 
+def validate_ls_weights(weights: pd.DataFrame, close: pd.DataFrame, gross_cap: float) -> None:
+    """
+    Long-short contract (Handoff #8): weights may be negative, but
+      - gross exposure sum_i |W_i(t)| must stay <= gross_cap,
+      - no ghost positions: |weight| > 0 requires a non-NaN close that day.
+    """
+    w = weights.fillna(0.0)
+    gross = w.abs().sum(axis=1)
+    if (gross > gross_cap + 1e-6).any():
+        bad = gross[gross > gross_cap + 1e-6]
+        raise ValueError(f"Gross exposure > {gross_cap} on {len(bad)} dates, "
+                         f"first: {bad.index[0]} (gross={bad.iloc[0]:.4f})")
+    aligned_close = close.reindex(index=w.index, columns=w.columns)
+    ghost = (w.abs() > WEIGHT_TOLERANCE) & aligned_close.isna()
+    if ghost.to_numpy().any():
+        bad = w.index[ghost.any(axis=1)]
+        raise ValueError(f"Nonzero weight on NaN price (ghost position) on dates: {list(bad[:5])}")
+
+
+def run_ls_backtest(
+    close: pd.DataFrame,
+    weights: pd.DataFrame,
+    cost_per_side: float = 0.0,
+    funding_rate_annual: float = 0.0,
+    gross_cap: float | None = None,
+) -> BacktestResult:
+    """
+    Long-short vectorized backtest for market-neutral books.
+
+    Same sacred lag as run_backtest: W(t) earns the t -> t+1 return, r_p(t) =
+    sum_i W_i(t-1) * r_i(t), weights are NAV fractions, cash earns zero. Shorts are
+    abstracted perp exposures: a negative weight earns the negative of the asset
+    return. A coin whose price series ends mid-hold contributes zero from its last
+    close onward (exit at last print; alphas should exit via the universe first).
+
+    Realism hooks, both dormant by default (Handoff #8 WS-A.3):
+      - cost_per_side charged on traded notional sum|dW| (inception excluded),
+      - funding_rate_annual/365 charged daily on LAGGED gross exposure (a crude
+        stand-in for perp funding paid on both legs; refine at the realism layer).
+    """
+    from . import config as _config
+
+    gross_cap = _config.MN_GROSS_CAP if gross_cap is None else gross_cap
+    weights = weights.sort_index().fillna(0.0)
+    validate_ls_weights(weights, close, gross_cap)
+
+    close = close.reindex(columns=weights.columns)
+    rets = close.pct_change(fill_method=None).reindex(index=weights.index)
+
+    w_lag = weights.shift(1).fillna(0.0)
+    gross_ret = (w_lag * rets).fillna(0.0).sum(axis=1)
+    gross_ret.name = "gross"
+
+    dw = weights.diff()
+    dw.iloc[0] = 0.0
+    tau = 0.5 * dw.abs().sum(axis=1)
+    tau.name = "turnover"
+
+    gross_exposure_lag = w_lag.abs().sum(axis=1)
+    funding = gross_exposure_lag * (funding_rate_annual / 365.0)
+    cost = 2.0 * tau * cost_per_side + funding
+    cost.name = "cost"
+
+    net = (1.0 + gross_ret) * (1.0 - cost) - 1.0
+    net.name = "net"
+    equity = (1.0 + net).cumprod()
+    equity.name = "equity"
+
+    return BacktestResult(gross_returns=gross_ret, net_returns=net, turnover=tau,
+                          costs=cost, equity=equity, weights=weights)
+
+
 def run_drift_backtest(
     close: pd.DataFrame,
     rebalance_targets: pd.DataFrame,

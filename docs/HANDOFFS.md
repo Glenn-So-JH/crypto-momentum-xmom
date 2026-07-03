@@ -98,3 +98,10 @@ These numbers matter: the architect will use your real spreads and fees to set t
 
 ### WS3 result note (Claude Code, 2026-07-03)
 **Status: DONE.** Config levers in one block (xmom/config.py): OOS_VAULT_START = 2025-01-01, walk-forward settings (52-week initial train, 13-week folds), regime definitions (trend asset/SMA + named eras). Enforcement is structural, not honor-system: validation.playground_index / vault_index split the calendar, and run_alpha.py hands alphas ONLY pre-vault data during tuning (the vault is unseeable, not merely off-limits); scoring it requires an explicit --vault flag, is labeled a one-look final exam, and is ledger-logged as such. Tests: vault split exhaustive/disjoint, fold no-leak, plus the earlier walk-forward suite. Playground = 2,742 daily rows (2017-08-17 to 2024-12-31); vault = 548 daily rows (~78 weekly observations).
+
+---
+
+## Handoff #8 run  -  2026-07-03  -  Firm-grade market-neutral alpha research
+
+### WS-A result note (Claude Code, 2026-07-03)
+**Status: DONE.** Long-short engine (engine.run_ls_backtest: negative weights, gross cap, dormant fee + funding hooks, same sacred lag) and xmom/neutral.py construction pipeline: winsorized cross-sectional z-scores, inverse-vol sizing, rolling 90d betas to BTC (look-ahead-safe), a BTC hedge leg zeroing ex-ante book beta, single-factor risk model, 15% vol target with gross (2.0) and per-name (10%) caps applied as one shape-preserving scalar so neutrality survives the caps by construction; hedge leg exempt from the name cap. 8 new tests green (short-side pnl arithmetic, gross-cap raise, funding on lagged gross, beta recovery, hedged-book neutrality, trailing-only probe). Discrepancy noted honestly: the brief says "builds on the long-short engine from Handoff #7", but none existed; it was built here.
