@@ -82,3 +82,13 @@ These numbers matter: the architect will use your real spreads and fees to set t
 - Base success criteria 7/7. Neighbor plateau 0.83 to 1.06 net-50 Sharpe, no sign flips (gate=100 neighbor outperformed and was deliberately NOT selected). Single-name dependence healthy: top coin 12% of positive P&L. DSR 0.962 at K=12, labeled provisional with caveats.
 - Deliverables: research/PHASE2_RESULTS.md, research/figures/phase2_head_to_head.png, 15 ledger rows (45 total in the ledger).
 - Hard-stop compliance: no keys created or used, no orders, nothing deployed. Backtests and reports only.
+
+---
+
+## Handoff #7 run  -  2026-07-03  -  Discovery data + alpha sandbox + regime/OOS levers
+
+### WS1 result note (Claude Code, 2026-07-03)
+**Status: DONE.** Discovery panel: Binance single-source daily closes from the public archive bucket (delisted pairs retained: LUNA, FTT, ANC, BTT in-panel), 593 coins, 2017-08-17 to 2026-07-02, 463 weekly observations, breadth median 64 / max 260 at the generous $5M/day point-in-time bar. No splice, no reconciliation, no volume proxy: seam-free single source. Kraken tradability explicitly deferred to a later survivors-only gate.
+- Data integrity work the seam-free claim required: a corporate-actions split list (config.DISCOVERY_SYMBOL_SPLITS, 8 coins) severing symbol-reuse seams (LUNA's Terra 2.0 relist printed a fake +17.7M% day; COCOS/DREP/QUICK/SUN/BNX/VIDT/STRAX redenominations and swaps), plus halt-splitting for >30d holes and exclusion of bare BULL/BEAR leveraged tokens. Post-fix scan: the only remaining >|2.3| log-return events are LUNA's REAL May 2022 crash days, kept on purpose.
+- Ladder + Phase 2 re-run GROSS on the broad panel (research/DISCOVERY_BASELINES.md): the wide cross-section HURT cross-sectional momentum (S5a top-3 +0.37 thin -> -0.23 broad; S5c quintile stays +0.25); trend filters unchanged (S3b +1.12); Phase 2 overlays survive (+0.64 both, maxDD ~-50%); base-vs-challenger is a dead heat on this panel, so the Stage D tie-to-base verdict stands. Regime tables: edge is bull-conditional; 2025+ era negative for both candidates.
+- Tests 66 green. Reproducible via `make discovery`.

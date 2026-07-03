@@ -77,6 +77,7 @@ COMMODITY_TOKENS = {"PAXG", "XAUT", "KAG", "KAU"}
 # are still on disk. Kept for the stitch machinery and its tests.
 TICKER_RENAMES = {
     "MATIC": "POL",
+    "FTM": "S",     # Fantom -> Sonic (2025-01); no-op on venues without an FTM file
 }
 
 # --- Liquidity screen ----------------------------------------------------------
@@ -96,3 +97,64 @@ ANNUALIZATION = 365            # crypto trades every calendar day
 WARMUP_DAYS = 200              # longest lookback in the Stage 1C grid (SMA 200)
 COST_PER_SIDE_DECIDING = 0.0050   # DEC-002: 50 bps/side decides
 COST_PER_SIDE_OPTIMISTIC = 0.0025 # DEC-002: 25 bps/side reported alongside
+
+# --- Discovery dataset (Handoff #7 WS1): broad, single-source, gross-only --------
+# Signal discovery uses the cleanest broadest panel (Binance daily, full history per
+# coin, includes delisted pairs from data.binance.vision), judged GROSS across
+# regimes. Kraken tradability is a LATER gate applied only to survivors. This block
+# never feeds the execution dataset above.
+DATA_RAW_DISCOVERY = DATA_RAW / "discovery"
+DISCOVERY_QUOTE = "USDT"
+DISCOVERY_LIQUIDITY_WINDOW = 30
+DISCOVERY_LIQUIDITY_MIN_USD = 5_000_000   # generous: ~10x looser than the Kraken
+                                          # screen's Binance-equivalent (~$50M)
+DISCOVERY_SEGMENT_GAP_DAYS = 30  # a data hole longer than this (delist/relist halt)
+                                 # splits the coin into separate assets: no fake
+                                 # return may ever cross a trading halt
+# Leveraged-token suffixes excluded when the stripped stem also exists as a base
+# (BTCUP -> BTC exists -> leveraged token; JUP -> J does not -> real coin). A base
+# that IS one of these words (FTX-era BULL/BEAR 3x tokens) is also excluded.
+LEVERAGED_SUFFIXES = ("UP", "DOWN", "BULL", "BEAR")
+
+# Corporate-actions split list: dates where a symbol was reused for an economically
+# different asset (relist after death, redenomination, token swap), so the one-day
+# "return" across the date is fiction. Each date starts a NEW asset (__R1, ...).
+# Built from a systematic |log return| > 2.3 scan classified case by case; the
+# decisive fingerprint for most is zero trailing dollar volume (a halted market no
+# one could trade across). Real crashes with real volume (LUNA 05-11/12, OM 2025-04,
+# BTCST 2021-03) are deliberately NOT here. Auditable in git; extend as found.
+DISCOVERY_SYMBOL_SPLITS = {
+    "LUNA": ["2022-05-31"],    # Terra 2.0 relisted on the old symbol (+17.7M% fake)
+    "COCOS": ["2021-01-23"],   # 1:1000 redenomination
+    "DREP": ["2021-04-02"],    # 1:100 token swap
+    "QUICK": ["2023-07-21"],   # 1:1000 new-token swap
+    "SUN": ["2021-06-18"],     # 1:1000 redenomination
+    "BNX": ["2023-02-22"],     # 1:100 redenomination after halt (pre-jump volume 0)
+    "VIDT": ["2022-11-09"],    # VIDT DAO swap after halt (pre-jump volume 0)
+    "STRAX": ["2024-03-28"],   # Stratis 10:1 token swap
+}
+
+# --- Regimes (Handoff #7 WS1.4 / WS3): first-class, defined once here -------------
+# Two orthogonal labelings, both reported by every discovery backtest:
+#   1. Trend regime, daily: BULL when BTC close > its 200d SMA, else BEAR.
+#   2. Named eras, contiguous date ranges (end date inclusive).
+REGIME_TREND_ASSET = "BTC"
+REGIME_TREND_SMA = 200
+REGIME_ERAS = [
+    ("2017-18 mania and bust", None, "2018-12-31"),   # None = panel start
+    ("2019 chop",              "2019-01-01", "2020-02-14"),
+    ("2020 covid crash",       "2020-02-15", "2020-04-15"),
+    ("2020-21 bull",           "2020-04-16", "2021-11-10"),
+    ("2022 bear",              "2021-11-11", "2022-12-31"),
+    ("2023-24 recovery",       "2023-01-01", "2024-12-31"),
+    ("2025+ vault era",        "2025-01-01", None),    # None = panel end
+]
+
+# --- Out-of-sample vault (Handoff #7 WS3) -----------------------------------------
+# Everything on/after OOS_VAULT_START is the locked one-look vault: tuning, plateau
+# sweeps, and iteration use strictly pre-vault data; the vault is scored once per
+# finished candidate and labeled the final exam. Discipline documented in
+# docs/ALPHA_SANDBOX.md and enforced by run_alpha.py (vault off by default).
+OOS_VAULT_START = "2025-01-01"
+WF_INITIAL_TRAIN_WEEKS = 52    # anchored walk-forward: first training window
+WF_TEST_WEEKS = 13             # out-of-sample fold length (one quarter)

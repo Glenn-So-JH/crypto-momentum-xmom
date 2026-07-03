@@ -5,9 +5,15 @@
 
 PY := .venv/bin/python
 
-.PHONY: data fetch build backtests test
+.PHONY: data fetch build backtests test discovery
 
 data: fetch build
+
+# Discovery dataset (Handoff #7): broad Binance-only panel for signal discovery
+discovery:
+	$(PY) discovery_fetch.py
+	$(PY) discovery_build.py
+	$(PY) discovery_baselines.py
 
 fetch:
 	$(PY) phase1_fetch_data.py

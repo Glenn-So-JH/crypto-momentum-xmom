@@ -105,6 +105,50 @@ def check_and_clean(frame: pd.DataFrame, name: str) -> tuple[pd.DataFrame, dict]
     return cleaned, report
 
 
+def split_on_halts(
+    frame: pd.DataFrame,
+    base: str,
+    gap_days: int,
+    split_dates: list | None = None,
+    min_segment_rows: int = 30,
+) -> dict[str, pd.DataFrame]:
+    """
+    Split one coin's history into separate assets at (a) data holes longer than
+    `gap_days` (a delisting or trading halt) and (b) any configured `split_dates`
+    (corporate actions: relist under the old symbol, redenomination, token swap).
+    The first segment keeps the base name; later ones get __R1, __R2, ...
+
+    Why: exchanges reuse symbols across economically different assets (Binance's
+    LUNAUSDT carries old Terra AND Terra 2.0), and redenominations reprice a token
+    1000:1 overnight. Without the split, a backtest books a fictional return across
+    the seam. Segments shorter than `min_segment_rows` are dropped (they can never
+    pass a 30-day liquidity screen).
+    """
+    if frame.empty:
+        return {}
+    frame = frame.sort_index()
+    gaps = frame.index.to_series().diff()
+    break_starts = set(gaps[gaps > pd.Timedelta(days=gap_days)].index)
+    for d in split_dates or []:
+        d = pd.Timestamp(d)
+        at_or_after = frame.index[frame.index >= d]
+        if len(at_or_after) and at_or_after[0] > frame.index[0]:
+            break_starts.add(at_or_after[0])
+    if not break_starts:
+        return {base: frame}
+    out = {}
+    bounds = [frame.index[0]] + sorted(break_starts) + [None]
+    for i in range(len(bounds) - 1):
+        seg = frame.loc[bounds[i]:] if bounds[i + 1] is None else \
+            frame.loc[bounds[i]:bounds[i + 1]].iloc[:-1]
+        # .loc end is inclusive; drop the row that starts the next segment.
+        if len(seg) < min_segment_rows:
+            continue
+        name = base if i == 0 else f"{base}__R{i}"
+        out[name] = seg
+    return out
+
+
 def stitch_renames(frames: dict[str, pd.DataFrame], renames: dict[str, str] | None = None) -> dict[str, pd.DataFrame]:
     """
     Merge a rebranded coin's old-symbol history into its new canonical symbol.

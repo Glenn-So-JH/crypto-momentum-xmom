@@ -172,3 +172,21 @@ Volume-basis harmonization: raw Binance volumes run 10-50x Kraken's, which infla
 - Residual survivorship: the candidate set is pairs Kraken lists at fetch time. Coins delisted before that date (LUNA-era casualties, FTT) never enter. Within the window the screen is point-in-time and honest; across pre-window delistings it cannot see the dead.
 - Pre-history is another venue's prints (documented above), and USDT-quoted.
 - Ambiguous rebrands are NOT stitched (only MATIC->POL and FTM->S are); such coins are Kraken-only until documented properly.
+
+---
+
+# Discovery dataset (Handoff #7 WS1): single-source, broad, regime-ready
+
+Appended 2026-07-03. This is a SECOND dataset for signal discovery; the Kraken execution dataset above is unchanged. Kraken tradability (thin universe, venue costs, splice constraints) is deliberately DEFERRED to a later gate applied only to signals that survive discovery.
+
+- **Source:** Binance daily klines from the public data.binance.vision bucket, one source across each coin's full history. No splice, no reconciliation gate, no volume-rescaling proxy: seam-free by construction.
+- **Survivorship-conscious:** the bucket retains delisted pairs, so dead coins are in the panel and can enter the point-in-time universe while they were liquid (e.g. LUNA, FTT).
+- **Universe bar (generous, discovery-grade):** trailing-30d median dollar volume >= $5,000,000 on Binance. The execution screen's $1M Kraken bar is roughly $50M in Binance-equivalent volume, so this is ~10x looser: a wide cross-section for XS signals, not a tradability claim.
+- **Halt- and corporate-action splitting:** data holes longer than 30 days AND the documented symbol-reuse events in `config.DISCOVERY_SYMBOL_SPLITS` (relists on a dead symbol, redenominations, token swaps: LUNA's Terra 2.0 relist printed a fake +17,700,000% one-day return before this fix) split a symbol into separate assets. 10 coins split: BNX, COCOS, CVC, DREP, FTT, LUNA, QUICK, STRAX, SUN, VIDT. No return can cross a halt or a swap. Real crash days with real volume (LUNA 2022-05-11/12, OM 2025-04-13) are kept.
+- **Costs:** discovery is judged GROSS (DEC-002 net columns exist but do not decide anything here).
+
+**Panel:** 2017-08-17 to 2026-07-02, 3242 daily rows, 463 weekly observations (548 daily rows on/after 2025-01-01 are locked in the one-look OOS vault). Assets: 599 segments from 589 coins; 557 ever pass the screen.
+
+**Universe breadth (median members/day by year):** 2017: 0, 2018: 8, 2019: 11, 2020: 22, 2021: 165, 2022: 99, 2023: 68, 2024: 124, 2025: 104, 2026: 52.
+
+**Regimes (defined in xmom/config.py, reported by every discovery backtest):** daily BTC-vs-200d-SMA trend labels, plus named eras: 2017-18 mania and bust (panel start to 2018-12-31); 2019 chop (2019-01-01 to 2020-02-14); 2020 covid crash (2020-02-15 to 2020-04-15); 2020-21 bull (2020-04-16 to 2021-11-10); 2022 bear (2021-11-11 to 2022-12-31); 2023-24 recovery (2023-01-01 to 2024-12-31); 2025+ vault era (2025-01-01 to panel end).
