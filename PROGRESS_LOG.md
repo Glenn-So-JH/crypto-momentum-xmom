@@ -127,3 +127,13 @@ Fees: maker 0.0025 (0.250%)  |  taker 0.004 (0.400%)
 **Decisions:** Fixed reference baselines (the ladder, the frozen Phase 2 candidates) may be reported across the vault era since they are not tuned; anything editable in the sandbox never sees it.
 **Next:** WS2: the alpha sandbox itself.
 **LinkedIn seed:** "I put two years of my data in a vault my own tooling refuses to show me. The best out-of-sample discipline is not willpower, it is code that makes peeking impossible."
+
+---
+
+## 2026-07-03 | Handoff 7 WS2 | The alpha sandbox: one function, one command, no self-deception
+**Did:** Built the discovery-first sandbox: research/my_alpha.py (edit one function with a documented weight contract) plus run_alpha.py / make alpha (gross headline, net-50 footnote, regime breakdown, parameter plateau sweep, walk-forward folds, BTC and equal-weight benchmarks, automatic trials-ledger logging, plain-English verdict in research/my_alpha_report.md). The harness enforces honesty structurally: it validates the weight contract, runs a look-ahead probe (hides the last ten weeks and fails the run if earlier weights change), withholds the OOS vault from tuning entirely, and counts every sweep combination in the ledger. Guide with three worked example ideas in docs/ALPHA_SANDBOX.md.
+**Learned:** The out-of-the-box example (28d XS momentum, top quintile) is itself a lesson: gross Sharpe +0.68 on the playground versus BTC's +0.80, plateau stable, positive in only 11 of 23 folds, 2,173% turnover. The founding idea of this project, run on the cleanest broadest data we have, does not beat buy-and-hold before costs. The sandbox said so in one command, which is exactly what it is for.
+**Surprised / stuck:** Nothing structural. K for the example family is already 13 after one command (12 sweep combos plus headline), which makes the multiple-testing cost of casual grid-widening viscerally obvious.
+**Decisions:** Sandbox judges gross plus regime robustness on the discovery panel; Kraken costs and the thin universe stay a later survivors-only gate (per the revised handoff). Vault scoring only via an explicit --vault flag, logged as a declared look.
+**Next:** Handoff #7 complete. Natural follow-ons: E5 (TS+XS intersection) as a registered sandbox run, and the Phase 3 cost model for the Phase 2 candidate.
+**LinkedIn seed:** "I built a sandbox where testing a trading idea takes one function and one command, and where the tooling itself refuses to let me cheat: it hides the future, hides two years of out-of-sample data, and bills every parameter I try against my own significance. First finding: my founding idea does not beat buy-and-hold. Before fees."

@@ -5,7 +5,11 @@
 
 PY := .venv/bin/python
 
-.PHONY: data fetch build backtests test discovery
+.PHONY: data fetch build backtests test discovery alpha
+
+# Alpha sandbox (Handoff #7): edit research/my_alpha.py, then run this
+alpha:
+	$(PY) run_alpha.py
 
 data: fetch build
 
